@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import InteractiveMap from './components/InteractiveMap.vue'
+import Main from './components/Main.vue'
 </script>
 
 <template>
   <main>
-    <InteractiveMap />
+    <Main />
   </main>
 </template>
 
