@@ -1,16 +1,17 @@
 package fr.ynov.ELO.controller;
 
+import fr.ynov.ELO.DTO.LivreDTO;
 import fr.ynov.ELO.entity.Anecdote;
 import fr.ynov.ELO.entity.Livre;
 import fr.ynov.ELO.mapper.LivreMapper;
 import fr.ynov.ELO.repository.AnecdoteRepository;
 import fr.ynov.ELO.repository.LivreRepository;
+import fr.ynov.ELO.service.LivreService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,94 +25,50 @@ public class LivreController {
 
     private final AnecdoteRepository anecdoteRepository;
 
+    private final LivreService livreService;
+
     // Ajouter un nouveau livre
     @PostMapping
-    public ResponseEntity<?> createLivre(@RequestBody Livre livre) {
-        // Créer une nouvelle liste pour contenir les anecdotes traitées
-        List<Anecdote> anecdotesTraitees = new ArrayList<>();
-
-        // Itérer sur la liste d’anecdotes donnée dans le livre
-        for (Anecdote anecdote : livre.getAnecdotes()) {
-            if (anecdote.getId() != 0) {
-                Anecdote existingAnecdote =
-                        anecdoteRepository.findById(anecdote.getId()).orElse(null);
-                if (existingAnecdote != null) {
-                    existingAnecdote.setLivre(livre);
-                    anecdotesTraitees.add(existingAnecdote);
-                }
-            } else {
-                anecdote.setLivre(livre);
-                anecdotesTraitees.add(anecdote);
-            }
-        }
-
-        // On remplace la liste d'anecdotes du livre par la nouvelle liste traitée
-        livre.setAnecdotes(anecdotesTraitees);
-
-        // Sauvegarder le livre et convertir vers DTO
-        Livre savedLivre = livreRepository.save(livre);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(livreMapper.entityToDto(savedLivre));
+    public ResponseEntity<?> createLivre(@RequestBody LivreDTO livreDTO) {
+        return ResponseEntity.ok(livreService.save(livreDTO));
     }
-
 
     // Récupérer tous les livres
     @GetMapping
     public ResponseEntity<List<?>> getAllLivres() {
-        List<Livre> livres = (List<Livre>) livreRepository.findAll();
-        if (livres.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).body(List.of("Aucun livre trouvé"));
-        }
-        return ResponseEntity.ok(livres.stream()
-                .map(livreMapper::entityToDto)
-                .toList());
+        List<?> livresDto = livreService.getAll();
+        return ResponseEntity.ok(livresDto);
     }
 
     // Supprimer un livre
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteLivre(@PathVariable int id) {
-        return livreRepository.findById(id)
-                .map(livre -> {
-                    livreRepository.delete(livre);
-                    return ResponseEntity.status(HttpStatus.NO_CONTENT).body("Livre supprimé avec succès");
-                })
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body("Livre non trouvé"));
+        Optional<Livre> optio = livreService.findById(id);
+        if(optio.isPresent()) {
+            livreService.delete(id);
+            return ResponseEntity.status(HttpStatus.OK).body("Livre supprimé");
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Livre non trouvé");
+        }
     }
 
     // Récupérer un livre par son ID
     @GetMapping("/{id}")
     public ResponseEntity<?> getLivreById(@PathVariable int id) {
-        Optional<Livre> optio = livreRepository.findById(id) ;
+        Optional<Livre> optio = livreService.findById(id);
         if(optio.isPresent()) {
-            return ResponseEntity.status(HttpStatus.OK).body(livreMapper.entityToDto(optio.get())) ;
+            return ResponseEntity.ok(optio.get());
         } else {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Livre non trouvé") ;
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Livre non trouvé");
         }
     }
 
     // Modifier un livre
-    @PutMapping("/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<?> updateLivre(@PathVariable int id, @RequestBody Livre livreDetails) {
-        Optional<Livre> optio = livreRepository.findById(id);
-
-        if (optio.isPresent()) {
-            Livre livre = optio.get();
-
-            livre.getAnecdotes().clear();
-            for (Anecdote anecdote : livreDetails.getAnecdotes()) {
-                if (anecdote.getId() != 0) {
-                    Anecdote existingAnecdote = anecdoteRepository.findById(anecdote.getId()).orElse(null);
-                    if (existingAnecdote != null) {
-                        livre.getAnecdotes().add(existingAnecdote);
-                        existingAnecdote.setLivre(livre);
-                    }
-                } else {
-                    anecdote.setLivre(livre);
-                    livre.getAnecdotes().add(anecdote);
-                }
-            }
-            Livre updatedLivre = livreRepository.save(livre);
-            return ResponseEntity.ok(livreMapper.entityToDto(updatedLivre));
+        Optional<?> updatedLivreDto = livreService.update(id, livreDetails);
+        if (updatedLivreDto.isPresent()) {
+            return ResponseEntity.ok(updatedLivreDto.get());
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Livre non trouvé");
         }
