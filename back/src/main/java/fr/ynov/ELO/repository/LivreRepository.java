@@ -1,7 +1,7 @@
 package fr.ynov.ELO.repository;
 
 import fr.ynov.ELO.entity.Livre;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.CrudRepository;
 
-public interface LivreRepository extends JpaRepository<Livre, Integer> {
+public interface LivreRepository extends CrudRepository<Livre, Integer> {
 }

@@ -1,7 +1,7 @@
 package fr.ynov.ELO.repository;
 
 import fr.ynov.ELO.entity.Anecdote;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.CrudRepository;
 
-public interface AnecdoteRepository extends JpaRepository<Anecdote, Integer> {
+public interface AnecdoteRepository extends CrudRepository<Anecdote, Integer> {
 }
