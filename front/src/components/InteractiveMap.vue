@@ -23,11 +23,26 @@ export default defineComponent({
 
     onMounted(async () => {
       if (mapRef.value) {
-        map = L.map(mapRef.value).setView([35, 10], 3)
+        map = L.map(mapRef.value, {
+          center: [40, 20],
+          zoom: 4,
+          minZoom: 3,
+          maxZoom: 7,
+          maxBounds: [
+            [-90, -180], // Sud-Ouest (latitude, longitude)
+            [90, 180], // Nord-Est (latitude, longitude)
+          ],
+          maxBoundsViscosity: 0.9, // Force avec laquelle la carte reste dans les limites (1.0 = maximum)
+        })
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution:
             '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          noWrap: true, // Empêche la répétition horizontale des tuiles
+          bounds: [
+            [-90, -180], // Sud-Ouest (latitude, longitude)
+            [90, 180], // Nord-Est (latitude, longitude)
+          ],
         }).addTo(map)
 
         try {
@@ -81,6 +96,15 @@ export default defineComponent({
                   const layer = e.target
                   const properties = feature.properties
 
+                  const countryColor = properties._randomColor || _randomColor()
+                  const selectedStyle = {
+                    fillColor: countryColor,
+                    weight: 3,
+                    color: countryColor,
+                    fillOpacity: 0.5,
+                    opacity: 0.5,
+                  }
+
                   if (selectedCountry === layer) {
                     if (geojsonLayer) {
                       geojsonLayer.resetStyle(layer)
@@ -94,16 +118,6 @@ export default defineComponent({
                     geojsonLayer.resetStyle(selectedCountry)
                   }
 
-                  const countryColor = properties._randomColor || _randomColor()
-
-                  const selectedStyle = {
-                    fillColor: countryColor,
-                    weight: 3,
-                    color: countryColor,
-                    fillOpacity: 0.5,
-                    opacity: 0.5,
-                  }
-
                   layer.setStyle(selectedStyle)
                   selectedCountry = layer
 
@@ -112,7 +126,19 @@ export default defineComponent({
                   }
 
                   if (map && layer.getBounds) {
-                    map.fitBounds(layer.getBounds())
+                    const bounds = layer.getBounds()
+
+                    // Calculer le centre actuel des limites
+                    const center = bounds.getCenter()
+
+                    const isOnRightSide = center.longitude > 0
+
+                    // Adapter la vue en utilisant le centre décalé
+                    map.fitBounds(bounds, {
+                      paddingTopLeft: [600, 0], // Ajoute un espace à gauche (300 pixels)
+                      paddingBottomRight: [0, 0], // Pas d'espace supplémentaire à droite
+                      maxZoom: 7, // Limite le zoom maximum lors du focus sur un pays
+                    })
                   }
 
                   emit('country-selected', properties.ADMIN)
@@ -149,5 +175,6 @@ export default defineComponent({
 #map {
   width: 100%;
   height: 100vh;
+  background-color: #aad2de;
 }
 </style>
